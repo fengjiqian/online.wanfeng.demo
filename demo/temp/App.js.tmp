@@ -1,0 +1,103 @@
+import './App.css';
+import Article from './components/Article';
+import { useState, useRef, useLayoutEffect, useCallback } from 'react';
+
+
+export default function App(props) {
+  const [articles, setArticles] = useState(props.articles);
+  const ArticleList = null;
+  // const ArticleList = articles
+  //   .map((article) => (
+  //     <Article
+  //       id={article.id}
+  //       name={article.name}
+  //     />
+  //   ));
+
+
+  const ws = useRef(null);
+  const [message, setMessage] = useState('');
+  const [readyState, setReadyState] = useState('正在链接中');
+  const [rdNum, SetRdNum] = useState(0);
+
+  /**
+   * 伪随机函数，测试用
+   *  */
+  const getRandomInt = useCallback(() => {
+    SetRdNum(Math.floor(Math.random() * Math.floor(999)));
+  }, []);
+
+  const webSocketInit = useCallback(() => {
+    const stateArr = [
+      '正在链接中',
+      '已经链接并且可以通讯',
+      '连接正在关闭',
+      '连接已关闭或者没有链接成功',
+    ];
+    if (!ws.current || ws.current.readyState === 3) {
+      ws.current = new WebSocket('ws://172.16.145.210:5001/ws');
+      ws.current.onopen = _e =>
+        setReadyState(stateArr[ws.current?.readyState ?? 0]);
+      ws.current.onclose = _e =>
+        setReadyState(stateArr[ws.current?.readyState ?? 0]);
+      ws.current.onerror = e =>
+        setReadyState(stateArr[ws.current?.readyState ?? 0]);
+      ws.current.onmessage = e => {
+        setMessage(e.data);
+      };
+    }
+  }, [ws]);
+
+  /**
+   * 初始化 WebSocket
+   * 且使用 WebSocket 原声方法获取信息
+   *  */
+  useLayoutEffect(() => {
+    getRandomInt();
+    webSocketInit();
+    return () => {
+      ws.current?.close();
+    };
+  }, [ws, getRandomInt, webSocketInit]);
+
+  console.log('ws.readyState', ws.current?.readyState);
+
+
+
+
+
+
+
+  return (
+    <div className="App">
+      <header className="App-header">
+
+        {ArticleList}
+
+        <div>{message}</div>
+        <div onClick={() => {
+          ws.current?.close();
+        }}>
+          close
+        </div>
+        <div onClick={() => {
+          getRandomInt();
+          webSocketInit();
+        }}>
+          start
+        </div>
+        <div onClick={() => {
+          if (ws.current?.readyState !== 1) {
+            console.log('尚未链接成功');
+            setMessage('正在链接');
+            return;
+          }
+          ws.current?.send(rdNum.toString());
+        }}>
+          ID:{rdNum}
+        </div>
+
+      </header>
+    </div>
+  );
+}
